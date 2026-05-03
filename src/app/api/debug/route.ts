@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const maxDuration = 30;
+
 export async function GET() {
   const b64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
   const legacyKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -33,6 +35,21 @@ export async function GET() {
     firestoreTest = e instanceof Error ? e.message : String(e);
   }
 
+  let anthropicTest: string;
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'Say "ok"' }],
+    });
+    const block = msg.content.find((b) => b.type === 'text');
+    anthropicTest = block && block.type === 'text' ? `SUCCESS: ${block.text}` : 'SUCCESS (no text block)';
+  } catch (e) {
+    anthropicTest = e instanceof Error ? e.message : String(e);
+  }
+
   return NextResponse.json({
     env: {
       HAS_BASE64: !!b64,
@@ -50,5 +67,6 @@ export async function GET() {
     decoded,
     decodeError,
     firestoreTest,
+    anthropicTest,
   });
 }

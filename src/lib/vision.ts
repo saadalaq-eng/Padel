@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ExtractedMatchData, SetScore } from '@/types';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: (process.env.ANTHROPIC_API_KEY ?? '').trim() });
 
 export async function extractMatchFromScreenshot(
   imageBase64: string,

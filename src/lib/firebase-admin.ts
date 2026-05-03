@@ -7,9 +7,12 @@ function initAdminApp(): admin.app.App {
   const existing = admin.apps.find((a) => a?.name === ADMIN_APP_NAME);
   if (existing) return existing;
 
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    : undefined;
+  const rawKey = process.env.FIREBASE_PRIVATE_KEY ?? '';
+  const privateKey = rawKey
+    // strip surrounding quotes if user pasted them: "-----BEGIN..." → -----BEGIN...
+    .replace(/^["']|["']$/g, '')
+    // convert literal \n sequences to real newlines
+    .replace(/\\n/g, '\n') || undefined;
 
   return admin.initializeApp(
     {

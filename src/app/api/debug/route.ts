@@ -36,18 +36,44 @@ export async function GET() {
   }
 
   let anthropicTest: string;
+  let anthropicRawFetch: string;
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+
+  // Raw fetch test — bypasses SDK to isolate network vs SDK issue
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Say ok' }],
+      }),
+    });
+    const text = await res.text();
+    anthropicRawFetch = `HTTP ${res.status}: ${text.slice(0, 200)}`;
+  } catch (e) {
+    const err = e as Error & { cause?: unknown };
+    anthropicRawFetch = `FETCH_ERROR: ${err.message} | cause: ${err.cause ? String(err.cause) : 'none'}`;
+  }
+
   try {
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({ apiKey });
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 10,
-      messages: [{ role: 'user', content: 'Say "ok"' }],
+      messages: [{ role: 'user', content: 'Say ok' }],
     });
     const block = msg.content.find((b) => b.type === 'text');
     anthropicTest = block && block.type === 'text' ? `SUCCESS: ${block.text}` : 'SUCCESS (no text block)';
   } catch (e) {
-    anthropicTest = e instanceof Error ? e.message : String(e);
+    const err = e as Error & { cause?: unknown };
+    anthropicTest = `${err.message} | cause: ${err.cause ? String(err.cause) : 'none'}`;
   }
 
   return NextResponse.json({
@@ -67,6 +93,7 @@ export async function GET() {
     decoded,
     decodeError,
     firestoreTest,
+    anthropicRawFetch,
     anthropicTest,
   });
 }

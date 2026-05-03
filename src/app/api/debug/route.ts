@@ -43,6 +43,8 @@ export async function GET() {
       HAS_ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
       ADMIN_PASSWORD_LENGTH: process.env.ADMIN_PASSWORD?.length ?? 0,
       HAS_ANTHROPIC_KEY: !!process.env.ANTHROPIC_API_KEY,
+      ANTHROPIC_KEY_LENGTH: process.env.ANTHROPIC_API_KEY?.length ?? 0,
+      ANTHROPIC_KEY_STARTS: process.env.ANTHROPIC_API_KEY?.substring(0, 10) ?? 'missing',
       NODE_VERSION: process.version,
     },
     decoded,

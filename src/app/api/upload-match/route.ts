@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractMatchFromScreenshot } from '@/lib/vision';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -22,7 +24,12 @@ export async function POST(req: NextRequest) {
 
     const bytes = await screenshot.arrayBuffer();
     const base64 = Buffer.from(bytes).toString('base64');
-    const mimeType = screenshot.type as 'image/jpeg' | 'image/png' | 'image/webp';
+
+    const rawType = screenshot.type;
+    const mimeType: 'image/jpeg' | 'image/png' | 'image/webp' =
+      rawType === 'image/png' ? 'image/png'
+      : rawType === 'image/webp' ? 'image/webp'
+      : 'image/jpeg';
 
     const playerNames: string[] = JSON.parse(playersJson);
 
@@ -31,6 +38,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(extractedData);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: `AI analysis failed: ${message}` }, { status: 500 });
   }
 }

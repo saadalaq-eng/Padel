@@ -10,30 +10,32 @@ export async function extractMatchFromScreenshot(
 ): Promise<ExtractedMatchData> {
   const prompt = `You are reading a Playtomic padel match result screenshot. The 4 players in this match are: ${playerNames.join(', ')}.
 
-IMPORTANT INSTRUCTIONS FOR READING SCORES:
-- Playtomic shows scores as sets. Each set has two numbers separated by a dash or slash, e.g. "6-3" means team1 scored 6, team2 scored 3.
-- The left/top team is team1 and the right/bottom team is team2.
-- Read ALL sets shown (usually 2, sometimes 3).
-- The winner is the team that won MORE sets. If each team won 1 set (e.g. 6-3, 3-6), it's a DRAW (winnerTeam = 0).
-- Do NOT guess — only use what is clearly visible in the image.
-- Match scores in Playtomic look like: "6 / 3" or "6-3" per set.
-- Player names in the screenshot may be shortened. Match them to the closest name from the list: ${playerNames.join(', ')}.
+PLAYTOMIC LAYOUT — read it exactly like this:
+- The screen is split into TWO horizontal rows. TOP row = Team 1. BOTTOM row = Team 2.
+- On the LEFT of each row: player photos and names side by side.
+- On the RIGHT: the scores for each SET, arranged in COLUMNS. Left column = Set 1, next column = Set 2, etc.
+  - The number in the TOP row for a column = Team 1's games in that set.
+  - The number in the BOTTOM row for that same column = Team 2's games in that set.
+- A TROPHY icon 🏆 appears on the winning team's row. That team is the winner.
+- If no trophy is visible, compare total sets won to decide (or mark as draw if equal).
+- The date/time appears in the top-right corner. "Today" means the current date.
 
-Extract:
-1. Which 2 players are on team 1 (left/top side) and which 2 are on team 2 (right/bottom side)
-2. The set scores as an array — each set is {team1: <games won by team1>, team2: <games won by team2>}
-3. Which team won: 1 if team1 won more sets, 2 if team2 won more sets, 0 if it's a draw (equal sets each)
-4. The match date and time (use ISO format, e.g. "2024-01-15T18:00:00.000Z")
+EXAMPLE from a real screenshot:
+  Top row:    Yazeed M  Abdullah  🏆  2  7  6
+  Bottom row: Saad      moham...      6  6  4
+  → team1=[Yazeed M, Abdullah], team2=[Saad, moham...], sets=[{team1:2,team2:6},{team1:7,team2:6},{team1:6,team2:4}], winnerTeam=1
 
-Return ONLY valid JSON with this exact structure (no markdown, no explanation):
+PLAYER NAMES: Match screenshot names to the closest player from this list: ${playerNames.join(', ')}. Names may be shortened in the screenshot (e.g. "moham..." = Abdulmohsen).
+
+Return ONLY valid JSON — no markdown, no explanation:
 {
   "team1PlayerNames": ["Exact Name 1", "Exact Name 2"],
   "team2PlayerNames": ["Exact Name 3", "Exact Name 4"],
-  "sets": [{"team1": 6, "team2": 3}, {"team1": 4, "team2": 6}],
+  "sets": [{"team1": 2, "team2": 6}, {"team1": 7, "team2": 6}, {"team1": 6, "team2": 4}],
   "winnerTeam": 1,
-  "matchDate": "2024-01-15T18:00:00.000Z",
+  "matchDate": "2024-01-15T06:00:00.000Z",
   "confidence": 0.95,
-  "rawText": "paste any score text you can see in the image here"
+  "rawText": "paste the raw score numbers you read from the image, e.g. top row: 2 7 6, bottom row: 6 6 4"
 }`;
 
   const response = await client.messages.create({

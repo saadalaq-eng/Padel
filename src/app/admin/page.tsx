@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Player, ExtractedMatchData, ConfirmMatchPayload } from '@/types';
 import UploadZone from '@/components/UploadZone';
 import ConfirmMatchModal from '@/components/ConfirmMatchModal';
@@ -43,12 +43,31 @@ export default function AdminPage() {
   const [savedTeam1Names, setSavedTeam1Names] = useState<[string, string]>(['', '']);
   const [savedTeam2Names, setSavedTeam2Names] = useState<[string, string]>(['', '']);
 
-  // Fetch players when entering setup step
+  // Manage Players section
+  const [photoUploadingId, setPhotoUploadingId] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [playerPhotos, setPlayerPhotos] = useState<Record<string, string>>({});
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Danger Zone / Reset Season
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  // Fetch players when entering setup step or when authenticated
   useEffect(() => {
     if (step === 'setup' && players.length === 0) {
       fetch('/api/players')
         .then((res) => res.json())
-        .then((data: Player[]) => setPlayers(data))
+        .then((data: Player[]) => {
+          setPlayers(data);
+          // Initialise playerPhotos from existing photoUrl values
+          const photos: Record<string, string> = {};
+          data.forEach((p) => {
+            if (p.photoUrl) photos[p.id] = p.photoUrl;
+          });
+          setPlayerPhotos((prev) => ({ ...photos, ...prev }));
+        })
         .catch(() => {/* silently ignore */});
     }
   }, [step, players.length]);
@@ -153,6 +172,66 @@ export default function AdminPage() {
     setExtractedData(null);
     setAnalyzeError('');
     setStep('setup');
+  };
+
+  // Manage Players — photo upload
+  const handlePhotoChange = async (playerId: string, file: File) => {
+    setPhotoUploadingId(playerId);
+    setPhotoError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('adminPassword', adminPassword);
+      formData.append('playerId', playerId);
+      formData.append('photo', file);
+
+      const res = await fetch('/api/upload-player-photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error ?? `Server error ${res.status}`);
+      }
+
+      setPlayerPhotos((prev) => ({ ...prev, [playerId]: data.photoUrl as string }));
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Failed to upload photo');
+    } finally {
+      setPhotoUploadingId(null);
+    }
+  };
+
+  // Danger Zone — reset season
+  const handleResetSeason = async () => {
+    const confirmed = window.confirm('Delete ALL match history? This cannot be undone.');
+    if (!confirmed) return;
+
+    setResetting(true);
+    setResetSuccess(false);
+    setResetError(null);
+
+    try {
+      const res = await fetch('/api/reset-matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error ?? `Server error ${res.status}`);
+      }
+
+      setResetSuccess(true);
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : 'Reset failed');
+    } finally {
+      setResetting(false);
+    }
   };
 
   const currentStepNum = STEP_NUMBERS[step];
@@ -426,6 +505,125 @@ export default function AdminPage() {
           >
             Upload Another Match
           </button>
+        </div>
+      )}
+
+      {/* ── Manage Players (visible when authenticated) ── */}
+      {step !== 'auth' && (
+        <div className="mt-8 rounded-2xl bg-white/5 border border-white/10 p-6">
+          <h2 className="text-xl font-bold text-pl-green mb-1">Manage Players</h2>
+          <p className="text-white/50 text-sm mb-5">Update player profile photos.</p>
+
+          {players.length === 0 && (
+            <p className="text-white/40 text-sm text-center py-4">Loading players…</p>
+          )}
+
+          {photoError && (
+            <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+              <p className="text-red-400 text-xs">{photoError}</p>
+            </div>
+          )}
+
+          {players.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {players.map((player) => {
+                const currentPhoto = playerPhotos[player.id] ?? player.photoUrl;
+                const isUploading = photoUploadingId === player.id;
+                return (
+                  <div
+                    key={player.id}
+                    className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-xl px-4 py-3"
+                  >
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-pl-purple-mid border border-white/20 flex-shrink-0 flex items-center justify-center">
+                      {currentPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={currentPhoto}
+                          alt={player.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white/40 text-lg font-bold">
+                          {player.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <p className="flex-1 text-white text-sm font-medium truncate">{player.name}</p>
+
+                    {/* Hidden file input */}
+                    <input
+                      ref={(el) => { fileInputRefs.current[player.id] = el; }}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          void handlePhotoChange(player.id, file);
+                        }
+                        // Reset so same file can be re-selected
+                        e.target.value = '';
+                      }}
+                    />
+
+                    {/* Change Photo button */}
+                    <button
+                      type="button"
+                      disabled={isUploading}
+                      onClick={() => fileInputRefs.current[player.id]?.click()}
+                      className="flex-shrink-0 text-xs font-semibold border border-pl-green/40 text-pl-green hover:bg-pl-green/10 active:scale-95 transition-all rounded-lg px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isUploading ? 'Uploading…' : 'Change Photo'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Danger Zone (visible when authenticated) ── */}
+      {step !== 'auth' && (
+        <div className="mt-6 mb-4 rounded-2xl bg-red-950/30 border border-red-500/30 p-6">
+          <h2 className="text-xl font-bold text-red-400 mb-1">Danger Zone</h2>
+          <p className="text-white/50 text-sm mb-5">
+            Destructive actions that cannot be undone.
+          </p>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4 bg-white/5 border border-red-500/20 rounded-xl px-4 py-3">
+              <div>
+                <p className="text-white text-sm font-semibold">Reset Season</p>
+                <p className="text-white/40 text-xs mt-0.5">
+                  Permanently delete all match records.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => void handleResetSeason()}
+                className="flex-shrink-0 text-xs font-bold bg-red-600 hover:bg-red-500 active:scale-95 transition-all text-white rounded-lg px-4 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {resetting ? 'Resetting…' : 'Reset Season'}
+              </button>
+            </div>
+
+            {resetSuccess && (
+              <p className="text-pl-green text-sm bg-pl-green/10 border border-pl-green/30 rounded-lg px-3 py-2">
+                Season reset. All match records deleted.
+              </p>
+            )}
+
+            {resetError && (
+              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                {resetError}
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

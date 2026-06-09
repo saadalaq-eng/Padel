@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import type {
   ExtractedMatchData,
+  Match,
   Player,
   ConfirmMatchPayload,
   SetScore,
 } from '@/types';
+import MatchCard from '@/components/MatchCard';
 
 interface ConfirmMatchModalProps {
   extracted: ExtractedMatchData;
@@ -187,6 +189,25 @@ export default function ConfirmMatchModal({
             ✕
           </button>
         </div>
+
+        {/* Live preview card */}
+        {(team1[0] || team1[1] || team2[0] || team2[1]) && (() => {
+          const previewMatch: Match = {
+            id: 'preview',
+            date: matchDate || new Date().toISOString(),
+            team1: [team1[0] || team1[1] || '', team1[1] || team1[0] || ''] as [string, string],
+            team2: [team2[0] || team2[1] || '', team2[1] || team2[0] || ''] as [string, string],
+            sets,
+            winnerTeam,
+            createdAt: new Date().toISOString(),
+          };
+          return (
+            <div className="mb-5">
+              <p className="text-white/60 text-xs uppercase tracking-widest font-semibold mb-2">Preview</p>
+              <MatchCard match={previewMatch} players={players} />
+            </div>
+          );
+        })()}
 
         {/* Team 1 */}
         <div className="mb-4">

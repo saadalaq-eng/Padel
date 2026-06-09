@@ -7,8 +7,11 @@ export async function extractMatchFromScreenshot(
   imageBase64: string,
   playerNames: string[],
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp',
+  todayISO: string,
 ): Promise<ExtractedMatchData> {
   const prompt = `You are reading a Playtomic padel match result screenshot. The 4 players in this match are: ${playerNames.join(', ')}.
+
+TODAY'S DATE IS: ${todayISO} — use this when the screenshot says "Today".
 
 PLAYTOMIC LAYOUT — read it exactly like this:
 - The screen is split into TWO horizontal rows. TOP row = Team 1. BOTTOM row = Team 2.

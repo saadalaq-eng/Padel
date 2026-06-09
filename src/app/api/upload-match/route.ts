@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
     const allPlayers = await getPlayers();
     const playerNames = allPlayers.map((p) => p.name);
 
-    const extractedData = await extractMatchFromScreenshot(base64, playerNames, mimeType);
+    const todayISO = new Date().toISOString().slice(0, 10); // e.g. "2026-06-09"
+    const extractedData = await extractMatchFromScreenshot(base64, playerNames, mimeType, todayISO);
 
     return NextResponse.json(extractedData);
   } catch (err) {

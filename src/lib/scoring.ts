@@ -1,4 +1,4 @@
-import { Match, Player, PlayerStats, RankChange, RankingEntry, SetScore, WeekMVP } from '@/types';
+import { HotStreak, Match, Player, PlayerStats, RankChange, RankingEntry, SetScore, WeekMVP } from '@/types';
 
 /**
  * Calculate total points for a team in a match.
@@ -188,4 +188,35 @@ export function computeWeekMVP(
     weekStart: weekStart.toISOString(),
     weekEnd: weekEnd.toISOString(),
   };
+}
+
+/**
+ * Compute the hot-streak MVP(s): player(s) with most points across their last 3 matches.
+ * Only players who have played at least 3 matches qualify.
+ * Returns all tied players if multiple share the top score.
+ */
+export function computeHotStreak(players: Player[], allMatches: Match[]): HotStreak | null {
+  if (allMatches.length === 0) return null;
+
+  const sorted = [...allMatches].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+
+  const qualified = players
+    .map((player) => {
+      const last3 = sorted
+        .filter((m) => m.team1.includes(player.id) || m.team2.includes(player.id))
+        .slice(0, 3);
+      if (last3.length < 3) return null;
+      const stats = computePlayerStats(player.id, last3);
+      return { player, points: stats.totalPoints, wins: stats.wins };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (qualified.length === 0) return null;
+
+  const maxPoints = Math.max(...qualified.map((q) => q.points));
+  const entries = qualified.filter((q) => q.points === maxPoints);
+
+  return { entries, matchCount: 3 };
 }

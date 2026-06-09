@@ -1,14 +1,14 @@
 import { format } from 'date-fns';
-import { getPlayers, getMatches, getMatchesBefore, getMatchesBetween } from '@/lib/firestore';
-import { computeRankings, computeWeekMVP, getCurrentWeekBounds } from '@/lib/scoring';
+import { getPlayers, getMatches, getMatchesBefore } from '@/lib/firestore';
+import { computeRankings, computeHotStreak, getCurrentWeekBounds } from '@/lib/scoring';
 import RankingTable from '@/components/RankingTable';
-import type { RankingEntry, WeekMVP } from '@/types';
+import type { RankingEntry, HotStreak } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   let rankings: RankingEntry[];
-  let mvp: WeekMVP | null;
+  let hotStreak: HotStreak | null;
   let error: string | null = null;
   let noPlayers = false;
 
@@ -18,19 +18,18 @@ export default async function HomePage() {
     if (players.length === 0) {
       noPlayers = true;
       rankings = [] as RankingEntry[];
-      mvp = null;
+      hotStreak = null;
     } else {
       const allMatches = await getMatches();
-      const { start: weekStart, end: weekEnd } = getCurrentWeekBounds();
+      const { start: weekStart } = getCurrentWeekBounds();
       const preWeekMatches = await getMatchesBefore(weekStart);
-      const weekMatches = await getMatchesBetween(weekStart, weekEnd);
       rankings = computeRankings(players, allMatches, preWeekMatches);
-      mvp = computeWeekMVP(players, weekMatches, weekStart, weekEnd);
+      hotStreak = computeHotStreak(players, allMatches);
     }
   } catch (err) {
     error = err instanceof Error ? err.message : 'Unknown error';
     rankings = [] as RankingEntry[];
-    mvp = null;
+    hotStreak = null;
   }
 
   const today = new Date();
@@ -110,7 +109,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."`}
       </div>
 
       {/* Rankings */}
-      <RankingTable rankings={rankings} mvp={mvp} />
+      <RankingTable rankings={rankings} hotStreak={hotStreak} />
     </div>
   );
 }

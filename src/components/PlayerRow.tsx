@@ -95,17 +95,22 @@ export default function PlayerRow({ entry, index }: PlayerRowProps) {
       </td>
 
       {/* Wins */}
-      <td className="px-2 sm:px-3 py-2 text-center align-middle text-white/80 text-sm">
+      <td className="px-1 py-2 text-center align-middle text-white/80 text-sm">
         {stats.wins}
       </td>
 
+      {/* Draws */}
+      <td className="px-1 py-2 text-center align-middle text-amber-300/70 text-sm">
+        {stats.draws}
+      </td>
+
       {/* Losses */}
-      <td className="px-2 sm:px-3 py-2 text-center align-middle text-white/80 text-sm">
+      <td className="px-1 py-2 text-center align-middle text-white/80 text-sm">
         {stats.losses}
       </td>
 
-      {/* Games Won — hidden on xs */}
-      <td className="px-2 sm:px-3 py-2 text-center align-middle text-white/80 text-sm hidden sm:table-cell">
+      {/* Games Won */}
+      <td className="px-1 py-2 text-center align-middle text-white/80 text-sm">
         {stats.gamesWon}
       </td>
 

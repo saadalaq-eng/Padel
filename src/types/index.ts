@@ -49,6 +49,17 @@ export interface WeekMVP {
   weekEnd: string;
 }
 
+export interface HotStreakEntry {
+  player: Player;
+  points: number;
+  wins: number;
+}
+
+export interface HotStreak {
+  entries: HotStreakEntry[];
+  matchCount: number;
+}
+
 export interface ExtractedMatchData {
   team1PlayerNames: string[];
   team2PlayerNames: string[];

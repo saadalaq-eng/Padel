@@ -64,7 +64,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."`}
             MANHOOD LEAGUE
           </h1>
           <p className="text-white/60 text-sm font-medium tracking-widest uppercase mt-1">
-            2025/26 Season
+            2026 Season Two
           </p>
           <p className="text-white/40 text-xs mt-2">{formattedDate}</p>
         </div>
@@ -103,7 +103,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."`}
           MANHOOD LEAGUE
         </h1>
         <p className="text-white/60 text-sm font-medium tracking-widest uppercase mt-1">
-          2025/26 Season
+          2026 Season Two
         </p>
         <p className="text-white/40 text-xs mt-2">{formattedDate}</p>
       </div>

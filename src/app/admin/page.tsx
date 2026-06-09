@@ -6,30 +6,24 @@ import UploadZone from '@/components/UploadZone';
 import ConfirmMatchModal from '@/components/ConfirmMatchModal';
 import { ShieldCheckIcon } from '@heroicons/react/24/outline';
 
-type Step = 'auth' | 'setup' | 'upload' | 'analyzing' | 'confirm' | 'success';
+type Step = 'auth' | 'upload' | 'analyzing' | 'confirm' | 'success';
 
 const STEP_NUMBERS: Record<Step, number> = {
   auth: 1,
-  setup: 2,
-  upload: 3,
-  analyzing: 3,
-  confirm: 3,
-  success: 4,
+  upload: 2,
+  analyzing: 2,
+  confirm: 2,
+  success: 3,
 };
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 export default function AdminPage() {
   const [step, setStep] = useState<Step>('auth');
   const [adminPassword, setAdminPassword] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
 
-  // Setup step
+  // Players (for confirm modal + manage players section)
   const [players, setPlayers] = useState<Player[]>([]);
-  const [team1p1, setTeam1p1] = useState('');
-  const [team1p2, setTeam1p2] = useState('');
-  const [team2p1, setTeam2p1] = useState('');
-  const [team2p2, setTeam2p2] = useState('');
-  const [setupError, setSetupError] = useState('');
 
   // Upload step
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -54,21 +48,20 @@ export default function AdminPage() {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
-  // Fetch players when entering setup step or when authenticated
+  // Fetch players once authenticated
   useEffect(() => {
-    if (step === 'setup' && players.length === 0) {
+    if (step !== 'auth' && players.length === 0) {
       fetch('/api/players')
         .then((res) => res.json())
         .then((data: Player[]) => {
           setPlayers(data);
-          // Initialise playerPhotos from existing photoUrl values
           const photos: Record<string, string> = {};
           data.forEach((p) => {
             if (p.photoUrl) photos[p.id] = p.photoUrl;
           });
           setPlayerPhotos((prev) => ({ ...photos, ...prev }));
         })
-        .catch(() => {/* silently ignore */});
+        .catch(() => { /* silently ignore */ });
     }
   }, [step, players.length]);
 
@@ -77,22 +70,6 @@ export default function AdminPage() {
     if (!passwordInput.trim()) return;
     setAdminPassword(passwordInput.trim());
     setPasswordInput('');
-    setStep('setup');
-  };
-
-  // Setup step
-  const handleSetupNext = () => {
-    const selected = [team1p1, team1p2, team2p1, team2p2];
-    if (selected.some((v) => !v)) {
-      setSetupError('Please select all 4 players.');
-      return;
-    }
-    const unique = new Set(selected);
-    if (unique.size < 4) {
-      setSetupError('All 4 players must be different.');
-      return;
-    }
-    setSetupError('');
     setStep('upload');
   };
 
@@ -117,12 +94,8 @@ export default function AdminPage() {
     setStep('analyzing');
 
     try {
-      const playerNames = [team1p1, team1p2, team2p1, team2p2]
-        .map((id) => players.find((p) => p.id === id)?.name ?? id);
-
       const formData = new FormData();
       formData.append('screenshot', selectedFile);
-      formData.append('players', JSON.stringify(playerNames));
       formData.append('adminPassword', adminPassword);
 
       const res = await fetch('/api/upload-match', {
@@ -156,7 +129,6 @@ export default function AdminPage() {
       throw new Error(data.error ?? `Server error ${res.status}`);
     }
 
-    // Save names for success screen
     const getPlayerName = (id: string) => players.find((p) => p.id === id)?.name ?? id;
     setSavedTeam1Names([getPlayerName(payload.team1[0]), getPlayerName(payload.team1[1])]);
     setSavedTeam2Names([getPlayerName(payload.team2[0]), getPlayerName(payload.team2[1])]);
@@ -171,7 +143,7 @@ export default function AdminPage() {
     }
     setExtractedData(null);
     setAnalyzeError('');
-    setStep('setup');
+    setStep('upload');
   };
 
   // Manage Players — photo upload
@@ -236,20 +208,6 @@ export default function AdminPage() {
 
   const currentStepNum = STEP_NUMBERS[step];
 
-  const playerSelectClass =
-    'w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-pl-green/60 focus:bg-white/15 transition-colors appearance-none';
-
-  const getPlayerOptions = () => (
-    <>
-      <option value="">Select player…</option>
-      {players.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name}
-        </option>
-      ))}
-    </>
-  );
-
   return (
     <div className="px-4 py-6">
       {/* Header */}
@@ -284,11 +242,7 @@ export default function AdminPage() {
                   {isDone ? '✓' : num}
                 </div>
                 {num < TOTAL_STEPS && (
-                  <div
-                    className={`w-8 h-0.5 ${
-                      isDone ? 'bg-pl-green/60' : 'bg-white/10'
-                    }`}
-                  />
+                  <div className={`w-8 h-0.5 ${isDone ? 'bg-pl-green/60' : 'bg-white/10'}`} />
                 )}
               </div>
             );
@@ -323,96 +277,12 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── Setup Step ── */}
-      {step === 'setup' && (
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
-          <h2 className="text-xl font-bold text-pl-green mb-1">Select Players</h2>
-          <p className="text-white/50 text-sm mb-5">Choose the 4 players for this match.</p>
-
-          {players.length === 0 && (
-            <p className="text-white/40 text-sm text-center py-4">Loading players…</p>
-          )}
-
-          {players.length > 0 && (
-            <div className="flex flex-col gap-4">
-              {/* Team 1 */}
-              <div>
-                <p className="text-white/60 text-xs uppercase tracking-widest font-semibold mb-2">
-                  Team 1
-                </p>
-                <div className="flex flex-col gap-2">
-                  <div className="relative">
-                    <select
-                      className={playerSelectClass}
-                      value={team1p1}
-                      onChange={(e) => setTeam1p1(e.target.value)}
-                    >
-                      {getPlayerOptions()}
-                    </select>
-                  </div>
-                  <div className="relative">
-                    <select
-                      className={playerSelectClass}
-                      value={team1p2}
-                      onChange={(e) => setTeam1p2(e.target.value)}
-                    >
-                      {getPlayerOptions()}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Team 2 */}
-              <div>
-                <p className="text-white/60 text-xs uppercase tracking-widest font-semibold mb-2">
-                  Team 2
-                </p>
-                <div className="flex flex-col gap-2">
-                  <div className="relative">
-                    <select
-                      className={playerSelectClass}
-                      value={team2p1}
-                      onChange={(e) => setTeam2p1(e.target.value)}
-                    >
-                      {getPlayerOptions()}
-                    </select>
-                  </div>
-                  <div className="relative">
-                    <select
-                      className={playerSelectClass}
-                      value={team2p2}
-                      onChange={(e) => setTeam2p2(e.target.value)}
-                    >
-                      {getPlayerOptions()}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {setupError && (
-                <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                  {setupError}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSetupNext}
-                className="w-full bg-pl-green text-pl-purple font-bold rounded-xl py-3 text-sm hover:bg-pl-green/90 active:scale-95 transition-all mt-2"
-              >
-                Next: Upload Screenshot →
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* ── Upload Step ── */}
       {step === 'upload' && (
         <div className="rounded-2xl bg-white/5 border border-white/10 p-6">
           <h2 className="text-xl font-bold text-pl-green mb-1">Upload Match Screenshot</h2>
           <p className="text-white/50 text-sm mb-5">
-            Upload a Playtomic screenshot to extract match data with AI.
+            Upload a Playtomic screenshot — AI will read the players and scores automatically.
           </p>
 
           <UploadZone
@@ -433,23 +303,14 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="flex gap-3 mt-5">
-            <button
-              type="button"
-              onClick={() => setStep('setup')}
-              className="flex-1 border border-white/20 text-white/70 hover:text-white hover:border-white/40 rounded-xl py-3 text-sm font-medium transition-colors"
-            >
-              ← Back
-            </button>
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={!selectedFile}
-              className="flex-1 bg-pl-green text-pl-purple font-bold rounded-xl py-3 text-sm hover:bg-pl-green/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Analyze with AI →
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={!selectedFile}
+            className="w-full mt-5 bg-pl-green text-pl-purple font-bold rounded-xl py-3 text-sm hover:bg-pl-green/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Analyze with AI →
+          </button>
         </div>
       )}
 
@@ -534,15 +395,10 @@ export default function AdminPage() {
                     key={player.id}
                     className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-xl px-4 py-3"
                   >
-                    {/* Avatar */}
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-pl-purple-mid border border-white/20 flex-shrink-0 flex items-center justify-center">
                       {currentPhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={currentPhoto}
-                          alt={player.name}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={currentPhoto} alt={player.name} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-white/40 text-lg font-bold">
                           {player.name.charAt(0).toUpperCase()}
@@ -550,10 +406,8 @@ export default function AdminPage() {
                       )}
                     </div>
 
-                    {/* Name */}
                     <p className="flex-1 text-white text-sm font-medium truncate">{player.name}</p>
 
-                    {/* Hidden file input */}
                     <input
                       ref={(el) => { fileInputRefs.current[player.id] = el; }}
                       type="file"
@@ -561,15 +415,11 @@ export default function AdminPage() {
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          void handlePhotoChange(player.id, file);
-                        }
-                        // Reset so same file can be re-selected
+                        if (file) void handlePhotoChange(player.id, file);
                         e.target.value = '';
                       }}
                     />
 
-                    {/* Change Photo button */}
                     <button
                       type="button"
                       disabled={isUploading}
@@ -590,17 +440,13 @@ export default function AdminPage() {
       {step !== 'auth' && (
         <div className="mt-6 mb-4 rounded-2xl bg-red-950/30 border border-red-500/30 p-6">
           <h2 className="text-xl font-bold text-red-400 mb-1">Danger Zone</h2>
-          <p className="text-white/50 text-sm mb-5">
-            Destructive actions that cannot be undone.
-          </p>
+          <p className="text-white/50 text-sm mb-5">Destructive actions that cannot be undone.</p>
 
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4 bg-white/5 border border-red-500/20 rounded-xl px-4 py-3">
               <div>
                 <p className="text-white text-sm font-semibold">Reset Season</p>
-                <p className="text-white/40 text-xs mt-0.5">
-                  Permanently delete all match records.
-                </p>
+                <p className="text-white/40 text-xs mt-0.5">Permanently delete all match records.</p>
               </div>
               <button
                 type="button"

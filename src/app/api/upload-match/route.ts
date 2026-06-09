@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractMatchFromScreenshot } from '@/lib/vision';
+import { getPlayers } from '@/lib/firestore';
 
 export const maxDuration = 60;
 
@@ -7,7 +8,6 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const screenshot = formData.get('screenshot') as File | null;
-    const playersJson = formData.get('players') as string | null;
     const adminPassword = formData.get('adminPassword') as string | null;
 
     if (adminPassword !== process.env.ADMIN_PASSWORD) {
@@ -16,10 +16,6 @@ export async function POST(req: NextRequest) {
 
     if (!screenshot) {
       return NextResponse.json({ error: 'No screenshot provided' }, { status: 400 });
-    }
-
-    if (!playersJson) {
-      return NextResponse.json({ error: 'No players provided' }, { status: 400 });
     }
 
     const bytes = await screenshot.arrayBuffer();
@@ -31,7 +27,9 @@ export async function POST(req: NextRequest) {
       : rawType === 'image/webp' ? 'image/webp'
       : 'image/jpeg';
 
-    const playerNames: string[] = JSON.parse(playersJson);
+    // Fetch all registered players so the AI can match names from the screenshot
+    const allPlayers = await getPlayers();
+    const playerNames = allPlayers.map((p) => p.name);
 
     const extractedData = await extractMatchFromScreenshot(base64, playerNames, mimeType);
 

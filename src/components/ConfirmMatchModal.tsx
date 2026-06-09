@@ -64,7 +64,7 @@ export default function ConfirmMatchModal({
   const [team2, setTeam2] = useState<[string, string]>(['', '']);
   const [sets, setSets] = useState<SetScore[]>(extracted.sets.length > 0 ? extracted.sets : [{ team1: 0, team2: 0 }]);
   const [matchDate, setMatchDate] = useState(extracted.matchDate ?? '');
-  const [winnerTeam, setWinnerTeam] = useState<1 | 2>(extracted.winnerTeam);
+  const [winnerTeam, setWinnerTeam] = useState<0 | 1 | 2>(extracted.winnerTeam);
   const [errors, setErrors] = useState<string[]>([]);
 
   // Pre-fill from extracted data on mount
@@ -143,15 +143,16 @@ export default function ConfirmMatchModal({
     onConfirm(payload);
   };
 
-  // Detect winner from sets totals
-  const autoDetectWinner = (): 1 | 2 => {
+  // Detect winner from sets totals (0 = draw)
+  const autoDetectWinner = (): 0 | 1 | 2 => {
     let t1Wins = 0;
     let t2Wins = 0;
     for (const s of sets) {
       if (s.team1 > s.team2) t1Wins++;
       else if (s.team2 > s.team1) t2Wins++;
     }
-    return t1Wins >= t2Wins ? 1 : 2;
+    if (t1Wins === t2Wins) return 0;
+    return t1Wins > t2Wins ? 1 : 2;
   };
 
   const playerOptions = (
@@ -297,9 +298,9 @@ export default function ConfirmMatchModal({
           <p className="text-white/60 text-xs uppercase tracking-widest font-semibold mb-2">
             Winner
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <label
-              className={`flex-1 flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm ${
+              className={`flex-1 flex items-center justify-center gap-2 border rounded-lg px-2 py-2 cursor-pointer transition-colors text-sm ${
                 winnerTeam === 1
                   ? 'border-pl-green bg-pl-green/10 text-pl-green'
                   : 'border-white/20 text-white/60 hover:border-white/40'
@@ -313,10 +314,27 @@ export default function ConfirmMatchModal({
                 onChange={() => setWinnerTeam(1)}
                 className="sr-only"
               />
-              Team 1 wins
+              Team 1
             </label>
             <label
-              className={`flex-1 flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm ${
+              className={`flex-1 flex items-center justify-center gap-2 border rounded-lg px-2 py-2 cursor-pointer transition-colors text-sm ${
+                winnerTeam === 0
+                  ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                  : 'border-white/20 text-white/60 hover:border-white/40'
+              }`}
+            >
+              <input
+                type="radio"
+                name="winner"
+                value="0"
+                checked={winnerTeam === 0}
+                onChange={() => setWinnerTeam(0)}
+                className="sr-only"
+              />
+              Draw
+            </label>
+            <label
+              className={`flex-1 flex items-center justify-center gap-2 border rounded-lg px-2 py-2 cursor-pointer transition-colors text-sm ${
                 winnerTeam === 2
                   ? 'border-pl-green bg-pl-green/10 text-pl-green'
                   : 'border-white/20 text-white/60 hover:border-white/40'
@@ -330,7 +348,7 @@ export default function ConfirmMatchModal({
                 onChange={() => setWinnerTeam(2)}
                 className="sr-only"
               />
-              Team 2 wins
+              Team 2
             </label>
           </div>
           <button

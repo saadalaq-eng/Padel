@@ -18,7 +18,7 @@ export interface Match {
   team1: [string, string]; // two player IDs
   team2: [string, string]; // two player IDs
   sets: SetScore[];
-  winnerTeam: 1 | 2;
+  winnerTeam: 1 | 2 | 0; // 0 = draw
   createdAt: string;
 }
 
@@ -27,6 +27,7 @@ export interface PlayerStats {
   totalPoints: number;
   matchesPlayed: number;
   wins: number;
+  draws: number;
   losses: number;
   gamesWon: number;
   gamesLost: number;
@@ -52,7 +53,7 @@ export interface ExtractedMatchData {
   team1PlayerNames: string[];
   team2PlayerNames: string[];
   sets: SetScore[];
-  winnerTeam: 1 | 2;
+  winnerTeam: 1 | 2 | 0; // 0 = draw
   matchDate: string;
   confidence: number;
   rawText?: string;
@@ -62,7 +63,7 @@ export interface ConfirmMatchPayload {
   team1: [string, string];
   team2: [string, string];
   sets: SetScore[];
-  winnerTeam: 1 | 2;
+  winnerTeam: 1 | 2 | 0;
   date: string;
   adminPassword: string;
 }

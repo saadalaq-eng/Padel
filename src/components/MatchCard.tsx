@@ -15,6 +15,7 @@ export default function MatchCard({ match, players }: MatchCardProps) {
 
   const isTeam1Winner = match.winnerTeam === 1;
   const isTeam2Winner = match.winnerTeam === 2;
+  const isDraw = match.winnerTeam === 0;
 
   const formattedDate = format(new Date(match.date), "EEE d MMM yyyy · HH:mm");
 
@@ -27,7 +28,7 @@ export default function MatchCard({ match, players }: MatchCardProps) {
             <span
               key={match.team1[i]}
               className={`text-sm truncate ${
-                isTeam1Winner ? 'text-white font-semibold' : 'text-white/50'
+                isTeam1Winner ? 'text-white font-semibold' : isDraw ? 'text-amber-300/80' : 'text-white/50'
               }`}
             >
               {player?.name ?? 'Unknown'}
@@ -36,6 +37,11 @@ export default function MatchCard({ match, players }: MatchCardProps) {
           {isTeam1Winner && (
             <span className="mt-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-pl-green text-pl-purple text-[9px] font-black">
               W
+            </span>
+          )}
+          {isDraw && (
+            <span className="mt-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400/30 text-amber-300 text-[9px] font-black border border-amber-400/40">
+              D
             </span>
           )}
         </div>
@@ -64,7 +70,7 @@ export default function MatchCard({ match, players }: MatchCardProps) {
             <span
               key={match.team2[i]}
               className={`text-sm truncate ${
-                isTeam2Winner ? 'text-white font-semibold' : 'text-white/50'
+                isTeam2Winner ? 'text-white font-semibold' : isDraw ? 'text-amber-300/80' : 'text-white/50'
               }`}
             >
               {player?.name ?? 'Unknown'}
@@ -73,6 +79,11 @@ export default function MatchCard({ match, players }: MatchCardProps) {
           {isTeam2Winner && (
             <span className="mt-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-pl-green text-pl-purple text-[9px] font-black self-end">
               W
+            </span>
+          )}
+          {isDraw && (
+            <span className="mt-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-400/30 text-amber-300 text-[9px] font-black border border-amber-400/40 self-end">
+              D
             </span>
           )}
         </div>

@@ -2,14 +2,14 @@ import { Match, Player, PlayerStats, RankChange, RankingEntry, SetScore, WeekMVP
 
 /**
  * Calculate total points for a team in a match.
- * Win = 10 pts + all games won. Loss = 2 pts + all games won.
+ * Win = 3 pts + 1 per game won. Draw = 1 pt + 1 per game won. Loss = 0 pts + 1 per game won.
  */
 export function calculateTeamPoints(
   sets: SetScore[],
   isTeam1: boolean,
-  isWinner: boolean,
+  result: 'win' | 'draw' | 'loss',
 ): number {
-  const matchPoints = isWinner ? 10 : 2;
+  const matchPoints = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
   const gamesWon = sets.reduce((sum, set) => sum + (isTeam1 ? set.team1 : set.team2), 0);
   return matchPoints + gamesWon;
 }
@@ -21,6 +21,7 @@ export function computePlayerStats(playerId: string, matches: Match[]): PlayerSt
   let totalPoints = 0;
   let matchesPlayed = 0;
   let wins = 0;
+  let draws = 0;
   let losses = 0;
   let gamesWon = 0;
   let gamesLost = 0;
@@ -34,13 +35,13 @@ export function computePlayerStats(playerId: string, matches: Match[]): PlayerSt
     matchesPlayed += 1;
 
     const isTeam1 = inTeam1;
-    const isWinner = isTeam1 ? match.winnerTeam === 1 : match.winnerTeam === 2;
+    const isDraw = match.winnerTeam === 0;
+    const isWinner = !isDraw && (isTeam1 ? match.winnerTeam === 1 : match.winnerTeam === 2);
+    const result: 'win' | 'draw' | 'loss' = isDraw ? 'draw' : isWinner ? 'win' : 'loss';
 
-    if (isWinner) {
-      wins += 1;
-    } else {
-      losses += 1;
-    }
+    if (result === 'win') wins += 1;
+    else if (result === 'draw') draws += 1;
+    else losses += 1;
 
     const playerGamesWon = match.sets.reduce(
       (sum, set) => sum + (isTeam1 ? set.team1 : set.team2),
@@ -53,7 +54,7 @@ export function computePlayerStats(playerId: string, matches: Match[]): PlayerSt
 
     gamesWon += playerGamesWon;
     gamesLost += playerGamesLost;
-    totalPoints += calculateTeamPoints(match.sets, isTeam1, isWinner);
+    totalPoints += calculateTeamPoints(match.sets, isTeam1, result);
   }
 
   return {
@@ -61,6 +62,7 @@ export function computePlayerStats(playerId: string, matches: Match[]): PlayerSt
     totalPoints,
     matchesPlayed,
     wins,
+    draws,
     losses,
     gamesWon,
     gamesLost,

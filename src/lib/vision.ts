@@ -8,23 +8,32 @@ export async function extractMatchFromScreenshot(
   playerNames: string[],
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp',
 ): Promise<ExtractedMatchData> {
-  const prompt = `This is a Playtomic padel match result screenshot. The 4 players in this match are: ${playerNames.join(', ')}.
+  const prompt = `You are reading a Playtomic padel match result screenshot. The 4 players in this match are: ${playerNames.join(', ')}.
 
-Extract the following information from the screenshot:
-1. Which 2 players are on team 1 and which 2 are on team 2
-2. The set scores (e.g. [{team1: 6, team2: 3}, {team1: 6, team2: 4}])
-3. Which team won (1 or 2)
-4. The match date and time
+IMPORTANT INSTRUCTIONS FOR READING SCORES:
+- Playtomic shows scores as sets. Each set has two numbers separated by a dash or slash, e.g. "6-3" means team1 scored 6, team2 scored 3.
+- The left/top team is team1 and the right/bottom team is team2.
+- Read ALL sets shown (usually 2, sometimes 3).
+- The winner is the team that won MORE sets. If each team won 1 set (e.g. 6-3, 3-6), it's a DRAW (winnerTeam = 0).
+- Do NOT guess — only use what is clearly visible in the image.
+- Match scores in Playtomic look like: "6 / 3" or "6-3" per set.
+- Player names in the screenshot may be shortened. Match them to the closest name from the list: ${playerNames.join(', ')}.
 
-Return ONLY valid JSON with this exact structure (no markdown, no explanation, just the JSON object):
+Extract:
+1. Which 2 players are on team 1 (left/top side) and which 2 are on team 2 (right/bottom side)
+2. The set scores as an array — each set is {team1: <games won by team1>, team2: <games won by team2>}
+3. Which team won: 1 if team1 won more sets, 2 if team2 won more sets, 0 if it's a draw (equal sets each)
+4. The match date and time (use ISO format, e.g. "2024-01-15T18:00:00.000Z")
+
+Return ONLY valid JSON with this exact structure (no markdown, no explanation):
 {
-  "team1PlayerNames": ["Player Name 1", "Player Name 2"],
-  "team2PlayerNames": ["Player Name 3", "Player Name 4"],
-  "sets": [{"team1": 6, "team2": 3}, {"team1": 6, "team2": 4}],
+  "team1PlayerNames": ["Exact Name 1", "Exact Name 2"],
+  "team2PlayerNames": ["Exact Name 3", "Exact Name 4"],
+  "sets": [{"team1": 6, "team2": 3}, {"team1": 4, "team2": 6}],
   "winnerTeam": 1,
   "matchDate": "2024-01-15T18:00:00.000Z",
   "confidence": 0.95,
-  "rawText": "any relevant raw text extracted from the image"
+  "rawText": "paste any score text you can see in the image here"
 }`;
 
   const response = await client.messages.create({
@@ -80,7 +89,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation, j
     !Array.isArray(data.team1PlayerNames) ||
     !Array.isArray(data.team2PlayerNames) ||
     !Array.isArray(data.sets) ||
-    (data.winnerTeam !== 1 && data.winnerTeam !== 2) ||
+    (data.winnerTeam !== 0 && data.winnerTeam !== 1 && data.winnerTeam !== 2) ||
     typeof data.matchDate !== 'string' ||
     typeof data.confidence !== 'number'
   ) {
@@ -100,7 +109,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation, j
     team1PlayerNames: data.team1PlayerNames as string[],
     team2PlayerNames: data.team2PlayerNames as string[],
     sets,
-    winnerTeam: data.winnerTeam as 1 | 2,
+    winnerTeam: data.winnerTeam as 0 | 1 | 2,
     matchDate: data.matchDate as string,
     confidence: data.confidence as number,
     rawText: typeof data.rawText === 'string' ? data.rawText : undefined,

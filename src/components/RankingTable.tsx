@@ -39,8 +39,15 @@ export default function RankingTable({ rankings, hotStreak }: RankingTableProps)
         )}
       </div>
 
+      {/* Hot Streak MVP */}
+      {hotStreak && (
+        <div className="mt-4 mx-3">
+          <HotStreakMVP hotStreak={hotStreak} />
+        </div>
+      )}
+
       {/* Points system reference */}
-      <div className="mx-3 mt-4 rounded-xl bg-white/5 border border-white/10 p-4">
+      <div className="mx-3 mt-4 pb-4 rounded-xl bg-white/5 border border-white/10 p-4">
         <p className="text-white/40 text-[10px] uppercase tracking-widest font-semibold mb-3">Points System</p>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-pl-green/10 border border-pl-green/20 py-2 px-1">
@@ -60,13 +67,6 @@ export default function RankingTable({ rankings, hotStreak }: RankingTableProps)
           </div>
         </div>
       </div>
-
-      {/* Hot Streak MVP */}
-      {hotStreak && (
-        <div className="mt-4 mx-3 pb-4">
-          <HotStreakMVP hotStreak={hotStreak} />
-        </div>
-      )}
     </div>
   );
 }

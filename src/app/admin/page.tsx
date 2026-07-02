@@ -43,6 +43,12 @@ export default function AdminPage() {
   const [playerPhotos, setPlayerPhotos] = useState<Record<string, string>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // Add Player section
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [addingPlayer, setAddingPlayer] = useState(false);
+  const [addPlayerError, setAddPlayerError] = useState<string | null>(null);
+  const [addPlayerSuccess, setAddPlayerSuccess] = useState<string | null>(null);
+
   // Danger Zone / Reset Season
   const [resetting, setResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
@@ -173,6 +179,33 @@ export default function AdminPage() {
       setPhotoError(err instanceof Error ? err.message : 'Failed to upload photo');
     } finally {
       setPhotoUploadingId(null);
+    }
+  };
+
+  // Add Player
+  const handleAddPlayer = async () => {
+    if (!newPlayerName.trim()) return;
+    setAddingPlayer(true);
+    setAddPlayerError(null);
+    setAddPlayerSuccess(null);
+
+    try {
+      const res = await fetch('/api/add-player', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword, name: newPlayerName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`);
+
+      const newPlayer: Player = { id: data.id, name: data.name, createdAt: data.createdAt };
+      setPlayers((prev) => [...prev, newPlayer]);
+      setAddPlayerSuccess(`"${data.name}" added successfully!`);
+      setNewPlayerName('');
+    } catch (err) {
+      setAddPlayerError(err instanceof Error ? err.message : 'Failed to add player');
+    } finally {
+      setAddingPlayer(false);
     }
   };
 
@@ -366,6 +399,48 @@ export default function AdminPage() {
           >
             Upload Another Match
           </button>
+        </div>
+      )}
+
+      {/* ── Add New Player ── */}
+      {step !== 'auth' && (
+        <div className="mt-8 rounded-2xl bg-white/5 border border-white/10 p-6">
+          <h2 className="text-xl font-bold text-pl-green mb-1">Add New Player</h2>
+          <p className="text-white/50 text-sm mb-5">Add a new player to the league.</p>
+
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Player name…"
+              value={newPlayerName}
+              onChange={(e) => {
+                setNewPlayerName(e.target.value);
+                setAddPlayerError(null);
+                setAddPlayerSuccess(null);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && void handleAddPlayer()}
+              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-pl-green/60 transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => void handleAddPlayer()}
+              disabled={addingPlayer || !newPlayerName.trim()}
+              className="flex-shrink-0 bg-pl-green text-pl-purple font-bold rounded-xl px-5 py-2.5 text-sm hover:bg-pl-green/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {addingPlayer ? 'Adding…' : 'Add'}
+            </button>
+          </div>
+
+          {addPlayerSuccess && (
+            <p className="mt-3 text-pl-green text-sm bg-pl-green/10 border border-pl-green/30 rounded-lg px-3 py-2">
+              {addPlayerSuccess}
+            </p>
+          )}
+          {addPlayerError && (
+            <p className="mt-3 text-red-400 text-xs bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+              {addPlayerError}
+            </p>
+          )}
         </div>
       )}
 
